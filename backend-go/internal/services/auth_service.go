@@ -11,12 +11,16 @@ import (
 	"quiz-game-backend/internal/utils"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type AuthService interface {
 	Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error)
 	Login(ctx context.Context, req dto.LoginRequest) (*dto.AuthResponse, error)
+	FacebookLogin(ctx context.Context, code string) (*dto.AuthResponse, error)
+	GoogleLogin(ctx context.Context, code string) (*dto.AuthResponse, error)
+	GetOAuthURL(provider string) string
 }
 
 type authService struct {
@@ -135,4 +139,79 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 		User:  dto.ToUserResponse(user),
 	}, nil
 
+}
+
+func (s *authService) GetOAuthURL(provider string) string {
+	state := uuid.New().String() // ควรเก็บไว้ใน session เพื่อ verify
+	switch provider {
+	case "facebook":
+		return s.oauthService.GetAuthURL(ProviderFacebook, state)
+	case "google":
+		return s.oauthService.GetAuthURL(ProviderGoogle, state)
+	}
+	return ""
+}
+
+func (s *authService) FacebookLogin(ctx context.Context, code string) (*dto.AuthResponse, error) {
+	// 1. Exchange code → token
+	token, err := s.oauthService.ExchangeCode(ctx, ProviderFacebook, code)
+	if err != nil {
+		return nil, err
+	}
+	// 2. Get user info
+	fbUser, err := s.oauthService.GetFacebookUserInfo(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	// 3. Find or create user
+	user, _ := s.userRepo.FindByFacebookID(ctx, fbUser.ID)
+	if user == nil {
+		user = &models.User{
+			Email:       fbUser.Email,
+			Username:    "fb_" + fbUser.ID[:8],
+			DisplayName: fbUser.Name,
+			AvatarURL:   fbUser.Picture.Data.URL,
+			FacebookID:  &fbUser.ID,
+			Level:       1,
+		}
+		s.userRepo.CreateUser(ctx, user)
+	}
+	// 4. Generate JWT
+	jwtToken, err := utils.GenerateTokenRSA(user.ID, user.Email, s.jwtConfig.PrivateKey, s.jwtConfig.Expiration)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.AuthResponse{Token: jwtToken, User: dto.ToUserResponse(user)}, nil
+}
+
+func (s *authService) GoogleLogin(ctx context.Context, code string) (*dto.AuthResponse, error) {
+	// 1. Exchange code → token
+	token, err := s.oauthService.ExchangeCode(ctx, ProviderGoogle, code)
+	if err != nil {
+		return nil, err
+	}
+	// 2. Get user info
+	googleUser, err := s.oauthService.GetGoogleUserInfo(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	// 3. Find or create user
+	user, _ := s.userRepo.FindByGoogleID(ctx, googleUser.ID)
+	if user == nil {
+		user = &models.User{
+			Email:       googleUser.Email,
+			Username:    "google_" + googleUser.ID[:8],
+			DisplayName: googleUser.Name,
+			AvatarURL:   googleUser.Picture,
+			GoogleId:    &googleUser.ID,
+			Level:       1,
+		}
+		s.userRepo.CreateUser(ctx, user)
+	}
+	// 4. Generate JWT
+	jwtToken, err := utils.GenerateTokenRSA(user.ID, user.Email, s.jwtConfig.PrivateKey, s.jwtConfig.Expiration)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.AuthResponse{Token: jwtToken, User: dto.ToUserResponse(user)}, nil
 }

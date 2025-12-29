@@ -49,15 +49,18 @@ func NewOAuthService(cfg *config.OAuthConfig) *OAuthService {
 			ClientID:     cfg.FacebookAppID,
 			ClientSecret: cfg.FacebookAppSecret,
 			RedirectURL:  cfg.FacebookRedirectURL,
-			Scopes:       []string{"email", "profile"},
+			Scopes:       []string{"email", "public_profile"}, // Facebook ใช้ public_profile
 			Endpoint:     facebook.Endpoint,
 		},
 		googleConfig: &oauth2.Config{
 			ClientID:     cfg.GoogleClientID,
 			ClientSecret: cfg.GoogleClientSecret,
 			RedirectURL:  cfg.GoogleRedirectURL,
-			Scopes:       []string{"email", "profile"},
-			Endpoint:     google.Endpoint,
+			Scopes: []string{
+				"https://www.googleapis.com/auth/userinfo.email",
+				"https://www.googleapis.com/auth/userinfo.profile",
+			}, // Google ใช้ full URL
+			Endpoint: google.Endpoint,
 		},
 	}
 }
