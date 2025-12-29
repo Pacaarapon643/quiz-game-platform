@@ -1,26 +1,29 @@
-# Environment variables
+# ================================
+# Environment & Secrets
+# ================================
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# JWT/RSA Keys (ใช้ Rancher Secrets ใน production)
+keys/
+*.pem
+
+# ================================
 # Dependencies
+# ================================
 node_modules/
 vendor/
-# Build outputs
+
+# ================================
+# Build Outputs
+# ================================
+# Node.js / Next.js
 build/
 dist/
 .next/
 out/
-# Logs
-*.log
-npm-debug.log*
-# OS files
-.DS_Store
-Thumbs.db
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+
 # Go
 *.exe
 *.exe~
@@ -29,6 +32,32 @@ Thumbs.db
 *.dylib
 *.test
 *.out
-# Local database
+go.work
+
+# ================================
+# Logs
+# ================================
+*.log
+npm-debug.log*
+
+# ================================
+# Database
+# ================================
 *.db
 *.sqlite
+
+# ================================
+# OS Files
+# ================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+
+# ================================
+# IDE
+# ================================
+.vscode/
+.idea/
+*.swp
+*.swo
