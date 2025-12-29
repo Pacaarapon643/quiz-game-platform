@@ -19,6 +19,12 @@ func SetAuthRoutes(api fiber.Router, db *database.Database, cfg *config.Config, 
 	auth.Post("/register", handler.Register)
 	auth.Post("/login", handler.Login)
 
+	// OAuth routes
+	auth.Get("/facebook", handler.GetFacebookURL)
+	auth.Get("/facebook/callback", handler.FacebookCallback)
+	auth.Get("/google", handler.GetGoogleURL)
+	auth.Get("/google/callback", handler.GoogleCallback)
+
 	// Protected routes (ต้อง login ก่อน)
 	auth.Post("/logout", middleware.Auth(cfg), handler.Logout)
 	auth.Get("/me", middleware.Auth(cfg), handler.GetMe)

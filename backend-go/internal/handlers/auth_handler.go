@@ -71,7 +71,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	utils.SetAuthCookie(c, response.Token, h.cfg.JWT.Expiration, h.cfg.IsProduction())
 	// set cache
 	h.userCache.Set(c.Context(), &response.User)
-	
+
 	return utils.Success(c, response.User, "Login successful")
 }
 
@@ -105,4 +105,53 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 
 	userResp := dto.ToUserResponse(user)
 	return utils.Success(c, userResp)
+}
+
+// GetFacebookURL - redirect ไป Facebook
+func (h *AuthHandler) GetFacebookURL(c *fiber.Ctx) error {
+	url := h.service.GetOAuthURL("facebook")
+	return c.Redirect(url)
+}
+
+// FacebookCallback - รับ code จาก Facebook
+func (h *AuthHandler) FacebookCallback(c *fiber.Ctx) error {
+	code := c.Query("code")
+	if code == "" {
+		return utils.BadRequest(c, "Missing code")
+	}
+
+	response, err := h.service.FacebookLogin(c.Context(), code)
+	if err != nil {
+		return utils.InternalServerError(c, err.Error())
+	}
+
+	utils.SetAuthCookie(c, response.Token, h.cfg.JWT.Expiration, h.cfg.IsProduction())
+	h.userCache.Set(c.Context(), &response.User)
+
+	// Redirect ไป frontend
+	return c.Redirect("http://localhost:3000/auth/success")
+}
+
+// GetGoogleURL, GoogleCallback - เหมือนกัน
+func (h *AuthHandler) GetGoogleURL(c *fiber.Ctx) error {
+	url := h.service.GetOAuthURL("google")
+	return c.Redirect(url)
+}
+
+func (h *AuthHandler) GoogleCallback(c *fiber.Ctx) error {
+	code := c.Query("code")
+	if code == "" {
+		return utils.BadRequest(c, "Missing code")
+	}
+
+	response, err := h.service.GoogleLogin(c.Context(), code)
+	if err != nil {
+		return utils.InternalServerError(c, err.Error())
+	}
+
+	utils.SetAuthCookie(c, response.Token, h.cfg.JWT.Expiration, h.cfg.IsProduction())
+	h.userCache.Set(c.Context(), &response.User)
+
+	// Redirect ไป frontend
+	return c.Redirect("http://localhost:3000/auth/success")
 }
