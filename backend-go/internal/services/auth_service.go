@@ -122,7 +122,9 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 	now := time.Now()
 	user.LastLoginAt = &now
 	user.IsOnline = true
-	s.userRepo.UpdateProfile(ctx, user)
+	if err := s.userRepo.UpdateProfile(ctx, user); err != nil {
+		return nil, err
+	}
 
 	token, err := utils.GenerateTokenRSA(
 		user.ID,
@@ -174,7 +176,9 @@ func (s *authService) FacebookLogin(ctx context.Context, code string) (*dto.Auth
 			FacebookID:  &fbUser.ID,
 			Level:       1,
 		}
-		s.userRepo.CreateUser(ctx, user)
+		if err := s.userRepo.CreateUser(ctx, user); err != nil {
+			return nil, err
+		}
 	}
 	// 4. Generate JWT
 	jwtToken, err := utils.GenerateTokenRSA(user.ID, user.Email, s.jwtConfig.PrivateKey, s.jwtConfig.Expiration)
@@ -206,7 +210,9 @@ func (s *authService) GoogleLogin(ctx context.Context, code string) (*dto.AuthRe
 			GoogleId:    &googleUser.ID,
 			Level:       1,
 		}
-		s.userRepo.CreateUser(ctx, user)
+		if err := s.userRepo.CreateUser(ctx, user); err != nil {
+			return nil, err
+		}
 	}
 	// 4. Generate JWT
 	jwtToken, err := utils.GenerateTokenRSA(user.ID, user.Email, s.jwtConfig.PrivateKey, s.jwtConfig.Expiration)

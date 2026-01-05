@@ -16,12 +16,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/google/uuid"
+	analytics "github.com/tom-draper/api-analytics/analytics/go/fiber"
 )
 
 type Server struct {
@@ -43,6 +45,15 @@ func New(cfg *config.Config, db *database.Database, redisClient *cache.RedisClie
 		ErrorHandler:          customErrorHandler,
 		DisableStartupMessage: true,
 	})
+
+	// Initialize default config
+	app.Use(favicon.New())
+
+	// // Or extend your config for customization
+	// app.Use(favicon.New(favicon.Config{
+	// 	File: "./favicon.ico",
+	// 	URL:  "/favicon.ico",
+	// }))
 
 	// Security middleware (ป้องกัน common attacks)
 	app.Use(helmet.New(helmet.Config{
@@ -86,6 +97,8 @@ func New(cfg *config.Config, db *database.Database, redisClient *cache.RedisClie
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
+
+	app.Use(analytics.Analytics("c23cd68d-131f-425d-afde-dc0e1a07ae2b")) // Add middleware
 
 	// Rate limiting (ป้องกัน DDoS)
 	if cfg.IsProduction() {
@@ -164,11 +177,16 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 		code = e.Code
 		message = e.Message
 	}
+	// Get RequestID safely
+	requestID := c.Locals("requestid")
+	if requestID == nil {
+		requestID = "unknown"
+	}
 	// Log error
-	log.Printf("Error: %v (RequestID: %s)", err, c.Locals("requestid"))
+	log.Printf("Error: %v (RequestID: %v)", err, requestID)
 	return c.Status(code).JSON(fiber.Map{
 		"error":      message,
-		"request_id": c.Locals("requestid"),
+		"request_id": requestID,
 	})
 }
 
