@@ -27,6 +27,7 @@ func Setup(app *fiber.App, cfg *config.Config, db *database.Database, redisClien
 	// Setup routes
 	SetAuthRoutes(v1, db, cfg, redisClient) // Authentication routes
 	SetUserRoutes(v1, db)                   // User routes
+	SetQuizRoutes(v1, db, cfg)              // Quiz routes
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

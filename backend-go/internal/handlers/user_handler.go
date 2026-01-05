@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"quiz-game-backend/internal/database"
 	"quiz-game-backend/internal/dto"
-	"quiz-game-backend/internal/repository"
 	"quiz-game-backend/internal/services"
 	"quiz-game-backend/internal/utils"
 	"strconv"
@@ -18,9 +16,7 @@ type UserHandler struct {
 	validator *validator.Validate
 }
 
-func NewUserHandler(db *database.Database) *UserHandler {
-	repo := repository.NewUserResponse(db.DB)
-	service := services.NewUserService(repo)
+func NewUserHandler(service services.UserService) *UserHandler {
 	return &UserHandler{
 		service:   service,
 		validator: validator.New(),

@@ -21,12 +21,16 @@ func NewPostgres(cfg *config.DatabaseConfig) (*Database, error) {
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
+		PrepareStmt: false, // Disable prepared statements to fix "prepared statement name is already in use" error
 	}
 
 	// Retry connection
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
-		db, err = gorm.Open(postgres.Open(cfg.URL), gormConfig)
+		db, err = gorm.Open(postgres.New(postgres.Config{
+			DSN:                  cfg.URL,
+			PreferSimpleProtocol: true, // Disable implicit prepared statement usage
+		}), gormConfig)
 		if err == nil {
 			break
 		}
